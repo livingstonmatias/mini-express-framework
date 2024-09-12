@@ -56,7 +56,7 @@ function json(req, res, next){
     })
 }
 
-function executeMiddlewares(node, req, res){
+function executeMiddlewares(node, req, res, clear){
     if(!node) return
 
     node.data(req, res, function (){
@@ -79,6 +79,13 @@ function LinkedList(){
           current = current.next
         }
         current.next = node
+    }
+    this.getLast = function(){
+        let current = this.head
+        while (current.next) {
+          current = current.next
+        }
+        return current
     }
 }
 
@@ -134,6 +141,7 @@ function redirect(...args){
 }
 
 function listen(port, callback){
+    const node = this.middlewares.getLast()
     const server = http.createServer((req, res)=>{
         res.status = status.bind(res)
         res.send = send.bind(res)
@@ -149,15 +157,17 @@ function listen(port, callback){
 
         if(route){
             const { params, query, callbacks=[] } = route   
+            const routeMiddlewares = new LinkedList()
 
             req.params = params
             req.query = query
-
+            
             callbacks.forEach(callback=>{
-                this.middlewares.append(callback)
+                routeMiddlewares.append(callback)
             })
-            executeMiddlewares(this.middlewares.head, req, res)
-            this.middlewares.head = null
+
+            node.next = routeMiddlewares.head
+            executeMiddlewares(this.middlewares.head, req, res)            
         }else{
             res.status(404).send('404 not found')
         }   
